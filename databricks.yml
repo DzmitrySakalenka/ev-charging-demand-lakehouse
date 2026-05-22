@@ -1,5 +1,10 @@
-# This is a Databricks asset bundle definition for ev_charging_demand_lakehouse.
-# See https://docs.databricks.com/dev-tools/bundles/index.html for documentation.
+# Databricks Asset Bundle definition for the EV Charging Demand Lakehouse.
+# See https://docs.databricks.com/dev-tools/bundles/index.html.
+#
+# The bundle is intentionally minimal while the project bootstraps. It currently
+# wires up a single smoke-test job that runs notebook/00_smoke_test.py against
+# the dev workspace. The Python wheel artifact and the ETL pipeline have been
+# removed until the corresponding source under src/ is in place (see SESSION.md).
 bundle:
   name: ev-charging-demand-lakehouse
   uuid: a986b828-2d1c-469c-81bc-30899d63d854
@@ -7,40 +12,38 @@ bundle:
 include:
   - resources/*.yml
 
-artifacts:
-  python_artifact:
-    type: whl
-    build: uv build --wheel
-
-# Variable declarations. These variables are assigned in the dev/prod targets below.
 variables:
   catalog:
-    description: The catalog to use
+    description: Unity Catalog catalog the lakehouse writes into.
   schema:
-    description: The schema to use
+    description: Schema within the catalog used as the default working schema.
+  cluster_id:
+    description: Existing all-purpose cluster ID for ad-hoc bundle jobs.
 
 targets:
   dev:
-    # The default target uses 'mode: development' to create a development copy.
-    # - Deployed resources get prefixed with '[dev my_user_name]'
-    # - Any job schedules and triggers are paused by default.
-    # See also https://docs.databricks.com/dev-tools/bundles/deployment-modes.html.
     mode: development
     default: true
     workspace:
       host: https://dbc-f610dae9-4d7c.cloud.databricks.com
     variables:
-      catalog: ev_charging_demand_lakehouse
+      catalog: ev_charging_demo
       schema: ${workspace.current_user.short_name}
+      # Small all-purpose cluster created during the first-time setup. If the
+      # cluster is recreated, update this value (or override per-run with
+      # `databricks bundle ... --var "cluster_id=$DATABRICKS_CLUSTER_ID"`).
+      cluster_id: "0521-233118-4eww8ff6"
   prod:
     mode: production
     workspace:
       host: https://dbc-f610dae9-4d7c.cloud.databricks.com
-      # We explicitly deploy to /Workspace/Users/dzmitrysakalenka@gmail.com to make sure we only have a single copy.
+      # Pin the deploy path so we only ever keep a single prod copy of the bundle.
       root_path: /Workspace/Users/dzmitrysakalenka@gmail.com/.bundle/${bundle.name}/${bundle.target}
     variables:
-      catalog: ev_charging_demand_lakehouse
+      catalog: ev_charging_demo
       schema: prod
+      # TODO: point this at the prod cluster once it exists.
+      cluster_id: ""
     permissions:
       - user_name: dzmitrysakalenka@gmail.com
         level: CAN_MANAGE

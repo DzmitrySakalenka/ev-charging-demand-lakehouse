@@ -1,0 +1,16 @@
+# Smoke-test job for the EV Charging Demand lakehouse.
+#
+# This job runs notebook/00_smoke_test.py as a Spark Python task on an existing
+# all-purpose cluster. It is the bundle-side companion to local `uv run python
+# notebook/00_smoke_test.py` and to the Databricks VS Code extension's
+# "Run File as Workflow" command.
+
+resources:
+  jobs:
+    smoke_test:
+      name: smoke_test
+      tasks:
+        - task_key: smoke_test
+          existing_cluster_id: ${var.cluster_id}
+          spark_python_task:
+            python_file: ../notebook/00_smoke_test.py
