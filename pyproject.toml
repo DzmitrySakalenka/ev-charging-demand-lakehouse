@@ -1,0 +1,40 @@
+[project]
+name = "ev_charging_demand_lakehouse"
+version = "0.1.0"
+authors = [{ name = "dzmitrysakalenka@gmail.com" }]
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "pip",
+    "pyspark",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+    "databricks-dlt",
+    "databricks-connect>=15.4,<15.5",
+    "ipykernel",
+    "wemake-python-styleguide",
+    "notebook",
+]
+
+[project.scripts]
+main = "ev_charging_demand_lakehouse.main:main"
+
+[tool.ruff]
+# Ruff config: https://docs.astral.sh/ruff/settings
+preview = true
+fix = false
+target-version = "py310"
+line-length = 120
+
+[tool.ruff.lint]
+select = [ "ALL" ]
+external = [ "WPS" ]
+
+flake8-quotes.inline-quotes = "double"
+mccabe.max-complexity = 6
+pydocstyle.convention = "google"
