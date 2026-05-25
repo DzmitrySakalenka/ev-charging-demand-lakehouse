@@ -121,8 +121,7 @@ sessions_clean = (
     )
     .withColumn(
         "is_valid_duration",
-        (F.col("duration_seconds") > 0)
-        & (F.col("duration_seconds") <= F.lit(MAX_VALID_DURATION_SECONDS)),
+        (F.col("duration_seconds") > 0) & (F.col("duration_seconds") <= F.lit(MAX_VALID_DURATION_SECONDS)),
     )
     .withColumn(
         "is_valid_avg_power",
@@ -158,15 +157,17 @@ weather_clean = (
     .withColumn("wind_speed_10m", F.col("wind_speed_10m_km_h").cast("double"))
     .withColumn(
         "temperature_bucket",
-        F.when(F.col("temperature_2m") < F.lit(COLD_TEMPERATURE_C), F.lit("cold"))
-         .when(F.col("temperature_2m") <= F.lit(HOT_TEMPERATURE_C), F.lit("mild"))
-         .otherwise(F.lit("hot")),
+        F
+        .when(F.col("temperature_2m") < F.lit(COLD_TEMPERATURE_C), F.lit("cold"))
+        .when(F.col("temperature_2m") <= F.lit(HOT_TEMPERATURE_C), F.lit("mild"))
+        .otherwise(F.lit("hot")),
     )
     .withColumn(
         "precipitation_bucket",
-        F.when(F.col("precipitation") == F.lit(0), F.lit("dry"))
-         .when(F.col("precipitation") <= F.lit(LIGHT_PRECIPITATION_MM), F.lit("light"))
-         .otherwise(F.lit("wet")),
+        F
+        .when(F.col("precipitation") == F.lit(0), F.lit("dry"))
+        .when(F.col("precipitation") <= F.lit(LIGHT_PRECIPITATION_MM), F.lit("light"))
+        .otherwise(F.lit("wet")),
     )
 )
 
@@ -179,57 +180,45 @@ weather_clean.write.format("delta").mode("overwrite").saveAsTable(SILVER_WEATHER
 has_station_metadata = spark.catalog.tableExists(BRONZE_STATIONS)
 if has_station_metadata:
     raw_stations = spark.read.table(BRONZE_STATIONS)
-    stations_clean = (
-        raw_stations
-        .select(
-            F.col("id").cast("string").alias("station_metadata_id"),
-            F.trim(F.col("station_name")).alias("station_name"),
-            _normalize_text(F.col("station_name")).alias("station_name_normalized"),
-            F.col("street_address").alias("address"),
-            _normalize_text(F.col("street_address")).alias("address_normalized"),
-            F.col("city"),
-            F.col("state"),
-            F.col("zip").alias("zip_code"),
-            F.col("latitude").cast("double").alias("latitude"),
-            F.col("longitude").cast("double").alias("longitude"),
-            F.col("ev_network"),
-            F.col("access_code"),
-            F.col("access_days_time"),
-            F.col("ev_level1_evse_num").cast("int").alias("ev_level1_evse_num"),
-            F.col("ev_level2_evse_num").cast("int").alias("ev_level2_evse_num"),
-            F.col("ev_dc_fast_num").cast("int").alias("ev_dc_fast_num"),
-            F.col("ev_connector_types"),
-        )
-        .dropDuplicates(["station_metadata_id"])
-    )
+    stations_clean = raw_stations.select(
+        F.col("id").cast("string").alias("station_metadata_id"),
+        F.trim(F.col("station_name")).alias("station_name"),
+        _normalize_text(F.col("station_name")).alias("station_name_normalized"),
+        F.col("street_address").alias("address"),
+        _normalize_text(F.col("street_address")).alias("address_normalized"),
+        F.col("city"),
+        F.col("state"),
+        F.col("zip").alias("zip_code"),
+        F.col("latitude").cast("double").alias("latitude"),
+        F.col("longitude").cast("double").alias("longitude"),
+        F.col("ev_network"),
+        F.col("access_code"),
+        F.col("access_days_time"),
+        F.col("ev_level1_evse_num").cast("int").alias("ev_level1_evse_num"),
+        F.col("ev_level2_evse_num").cast("int").alias("ev_level2_evse_num"),
+        F.col("ev_dc_fast_num").cast("int").alias("ev_dc_fast_num"),
+        F.col("ev_connector_types"),
+    ).dropDuplicates(["station_metadata_id"])
     stations_clean.write.format("delta").mode("overwrite").saveAsTable(SILVER_STATIONS)
 
 # ============================================================================
 # Enrichment: sessions LEFT weather LEFT stations (optional)
 # ============================================================================
 
-enriched = (
-    sessions_clean.alias("sess")
-    .join(
-        weather_clean.alias("wx"),
-        F.col("sess.session_hour_ts") == F.col("wx.weather_hour_ts"),
-        "left",
-    )
+enriched = sessions_clean.alias("sess").join(
+    weather_clean.alias("wx"),
+    F.col("sess.session_hour_ts") == F.col("wx.weather_hour_ts"),
+    "left",
 )
 
 if has_station_metadata:
-    enriched = (
-        enriched
-        .join(
-            stations_clean.alias("st"),
-            F.col("sess.station_name_normalized") == F.col("st.station_name_normalized"),
-            "left",
-        )
-        .withColumn(
-            "station_match_status",
-            F.when(F.col("st.station_metadata_id").isNotNull(), F.lit("matched_by_name"))
-             .otherwise(F.lit("unmatched")),
-        )
+    enriched = enriched.join(
+        stations_clean.alias("st"),
+        F.col("sess.station_name_normalized") == F.col("st.station_name_normalized"),
+        "left",
+    ).withColumn(
+        "station_match_status",
+        F.when(F.col("st.station_metadata_id").isNotNull(), F.lit("matched_by_name")).otherwise(F.lit("unmatched")),
     )
 else:
     enriched = enriched.withColumn("station_match_status", F.lit("unmatched"))
