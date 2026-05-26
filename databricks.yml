@@ -19,6 +19,8 @@ variables:
     description: Schema within the catalog used as the default working schema.
   cluster_id:
     description: Existing all-purpose cluster ID for ad-hoc bundle jobs.
+  warehouse_id:
+    description: Serverless SQL warehouse ID used by the ev_charging_overview dashboard.
 
 targets:
   dev:
@@ -33,6 +35,11 @@ targets:
       # cluster is recreated, update this value (or override per-run with
       # `databricks bundle ... --var "cluster_id=$DATABRICKS_CLUSTER_ID"`).
       cluster_id: "0521-233118-4eww8ff6"
+      # Serverless Starter Warehouse provisioned during dashboard setup.
+      # Override per-run with
+      #   `databricks bundle ... --var "warehouse_id=$DATABRICKS_WAREHOUSE_ID"`
+      # if you want to target a different warehouse without editing this file.
+      warehouse_id: "2e775cf5a88d3b2b"
   prod:
     mode: production
     workspace:
@@ -44,6 +51,8 @@ targets:
       schema: prod
       # TODO: point this at the prod cluster once it exists.
       cluster_id: ""
+      # TODO: point this at the prod SQL warehouse once it exists.
+      warehouse_id: ""
     permissions:
       - user_name: dzmitrysakalenka@gmail.com
         level: CAN_MANAGE
