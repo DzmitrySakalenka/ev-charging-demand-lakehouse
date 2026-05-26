@@ -68,13 +68,18 @@ SELECT
   COUNT(*) AS sessions_count,
   AVG(energy_kwh) AS avg_energy_kwh,
   AVG(duration_minutes) AS avg_duration_minutes
-FROM ev_charging_demo.silver.charging_sessions_enriched
-WHERE is_valid_start_ts = true
+FROM
+  ev_charging_demo.silver.charging_sessions_enriched
+WHERE
+  is_valid_start_ts = true
   AND is_valid_energy = true
   AND is_valid_duration = true
   AND is_duplicate = false
-GROUP BY temperature_bucket
-ORDER BY sessions_count DESC;
+  AND temperature_bucket IS NOT NULL
+GROUP BY
+  temperature_bucket
+ORDER BY
+  sessions_count DESC;
 
 -- ============================================================================
 -- Tile 6: Data quality summary (table)
