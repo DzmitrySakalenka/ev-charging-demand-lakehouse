@@ -1,0 +1,22 @@
+# AI/BI dashboard for the EV Charging Demand demo.
+#
+# The serialized layout lives at
+#   resources/dashboards/ev_charging_overview.lvdash.json
+# and is the source of truth for tile placement, visualizations, and the six
+# datasets that mirror notebook/07_dashboard_queries.sql.
+#
+# To update the dashboard:
+#   1. Edit it in the Databricks workspace UI.
+#   2. From the dashboard page: ... menu -> Export -> Dashboard file (.lvdash.json).
+#   3. Overwrite resources/dashboards/ev_charging_overview.lvdash.json.
+#   4. databricks bundle deploy --profile DEFAULT -t dev
+#
+# Do not hand-edit the JSON; round-tripping it loses visualization metadata.
+
+resources:
+  dashboards:
+    ev_charging_overview:
+      display_name: EV Charging Overview
+      # file_path is resolved relative to this YAML file.
+      file_path: ./dashboards/ev_charging_overview.lvdash.json
+      warehouse_id: ${var.warehouse_id}

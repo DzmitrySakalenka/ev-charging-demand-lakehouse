@@ -1,0 +1,59 @@
+# End-to-end pipeline job for the EV Charging Demand lakehouse.
+#
+# Task graph:
+#
+#   ingest_cary_sessions       ┐
+#   ingest_openmeteo_weather   ├─> build_silver ─> build_gold ─> data_quality_checks
+#   ingest_afdc_stations       ┘
+#
+# All tasks run as notebook_task on the same dev cluster as the smoke_test
+# job (var.cluster_id). SQL notebooks (05, 06) run on the same all-purpose
+# cluster rather than a SQL warehouse so the MVP does not need extra compute
+# provisioned. Switch the Gold/quality steps to sql_task on a warehouse if
+# the bundle grows to require parallel reads from a serving layer.
+
+resources:
+  jobs:
+    ev_charging_pipeline:
+      name: ev_charging_pipeline
+      # One pipeline run at a time. Bronze tasks overwrite tables and the
+      # Silver/Gold rebuilds are not idempotent under concurrent writers.
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: ingest_cary_sessions
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ../notebook/01_ingest_cary_sessions.py
+
+        - task_key: ingest_openmeteo_weather
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ../notebook/02_ingest_weather_openmeteo.py
+
+        - task_key: ingest_afdc_stations
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ../notebook/03_ingest_afdc_stations.py
+
+        - task_key: build_silver
+          existing_cluster_id: ${var.cluster_id}
+          depends_on:
+            - task_key: ingest_cary_sessions
+            - task_key: ingest_openmeteo_weather
+            - task_key: ingest_afdc_stations
+          notebook_task:
+            notebook_path: ../notebook/04_build_silver.py
+
+        - task_key: build_gold
+          existing_cluster_id: ${var.cluster_id}
+          depends_on:
+            - task_key: build_silver
+          notebook_task:
+            notebook_path: ../notebook/05_build_gold.sql
+
+        - task_key: data_quality_checks
+          existing_cluster_id: ${var.cluster_id}
+          depends_on:
+            - task_key: build_gold
+          notebook_task:
+            notebook_path: ../notebook/06_data_quality_checks.sql
